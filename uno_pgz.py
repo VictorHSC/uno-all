@@ -1,12 +1,50 @@
+# Custom libraries
+import state_action_reward as sar
+import pandas as pd
+import numpy as np
+import random
+
 from random import shuffle, choice, randint
 from itertools import product, repeat, chain
 from threading import Thread
 from time import sleep
 
+q = pd.DataFrame(data = np.zeros((len(sar.states()), len(sar.actions()))), columns = sar.actions(), index = sar.states())
+
+q = pd.read_csv("./assets/files/monte-carlo-q.csv", sep = ";", index_col = "Unnamed: 0")
+q.index      = q.index.map(lambda x: eval(x))
+q["IDX"]     = q.index
+q            = q.set_index("IDX", drop = True)
+q.index.name = None
+
+def step(state_dict, actions_dict):
+    """
+    Choose the optimal next action according to the followed policy.
+    Required parameters:
+        - state_dict as dict
+        - actions_dict as dict
+    """
+    
+    # (1) Transform state dictionary into tuple
+    state = [i for i in state_dict.values()]
+    state = tuple(state)
+    
+    # (2b) Greedy action
+    actions_possible = [key for key,val in actions_dict.items() if val != 0]
+    random.shuffle(actions_possible)
+    val_max = 0
+    
+    for i in actions_possible:
+        val = q.loc[[state],i][0]
+        if val >= val_max: 
+            val_max = val
+            action = i
+    
+    return action
 
 COLORS = ['red', 'yellow', 'green', 'blue']
 ALL_COLORS = COLORS + ['black']
-NUMBERS = list(range(10)) + list(range(1, 10))
+NUMBERS = list(range(0)) + list(range(1, 10))
 SPECIAL_CARD_TYPES = ['skip', 'reverse', '+2']
 COLOR_CARD_TYPES = NUMBERS + SPECIAL_CARD_TYPES * 2
 BLACK_CARD_TYPES = ['wildcard', '+4']
@@ -413,15 +451,161 @@ class AIUnoGame:
                 game.play(player_id, card_index, new_color)
                 played = True
         elif player.can_play(game.current_card):
+
+            state   =  {
+                "OPEN": 0,
+                "RED": 0,
+                "GRE": 0,
+                "BLU": 0,
+                "YEL": 0,
+                "SKI": 0,
+                "REV": 0,
+                "PL2": 0,
+                "PL4": 0,
+                "COL": 0,
+                "RED#": 0,
+                "GRE#": 0,
+                "BLU#": 0,
+                "YEL#": 0,
+                "SKI#": 0,
+                "REV#": 0,
+                "PL2#": 0
+            }
+
+            actions = {
+                "RED": 0,
+                "GRE": 0,
+                "BLU": 0,
+                "YEL": 0,
+                "SKI": 0,
+                "REV": 0,
+                "PL2": 0,
+                "PL4": 0,
+                "COL": 0,
+            }
+
+            state["OPEN"] = "RED" if game.current_card.color == 'red' else "GRE" if game.current_card.color == 'green' else "BLU" if game.current_card.color == 'blue' else "YEL"
+
             for i, card in enumerate(player.hand):
+
+                if card.color == 'red':
+                    state["RED"] = 2 if state["RED"] == 1 else 1
+
+                if card.color == 'green':
+                    state["GRE"] = 2 if state["GRE"] == 1 else 1
+
+                if card.color == 'blue':
+                    state["BLU"] = 2 if state["BLU"] == 1 else 1
+
+                if card.color == 'yellow':
+                    state["YEL"] = 2 if state["YEL"] == 1 else 1
+
+                if card.card_type == 'skip':
+                    state["SKI"] = 1
+
+                if card.card_type == 'reverse':
+                    state["REV"] = 1;
+
+                if card.card_type == '+2':
+                    state["PL2"] = 1
+
+                if card.card_type == '+4':
+                    state["PL4"] = 1
+
+                if card.card_type == 'wildcard':
+                    state["COL"] = 1
+                
                 if game.current_card.playable(card):
-                    if card.color == 'black':
-                        new_color = choice(COLORS)
-                    else:
-                        new_color = None
-                    game_data.log = "Player {} played {:full}".format(player, card)
-                    game.play(player=player_id, card=i, new_color=new_color)
+
+                    if card.color == 'red':
+                        state["RED#"] = 1
+                        actions["RED"] = 1
+
+                    if card.color == 'green':
+                        state["GRE#"] = 1
+                        actions["GRE"] = 1
+
+                    if card.color == 'blue':
+                        state["BLU#"] = 1
+                        actions["BLU"] = 1
+
+                    if card.color == 'yellow':
+                        state["YEL#"] = 1
+                        actions["YEL"] = 1
+
+                    if card.card_type == 'skip':
+                        state["SKI#"] = 1
+                        actions["SKI"] = 1
+
+                    if card.card_type == 'reverse':
+                        state["REV#"] = 1
+                        actions["REV"] = 1
+
+                    if card.card_type == '+2':
+                        state["PL2#"] = 1
+                        actions["PL2"] = 1
+
+                    if card.card_type == '+4':
+                        actions["PL4"] = 1
+
+                    if card.card_type == 'wildcard':
+                        actions["COL"] = 1
+
+            sugestao_ia = step(state, actions)
+            
+            i
+            card
+            for i, card in enumerate(player.hand):
+
+                i = i
+                card = card
+
+                if sugestao_ia == "RED" and (card.color == 'red' or card.card_type == current_card.card_type) and card.card_type in NUMBERS:
                     break
+
+                if sugestao_ia == "GRE" and (card.color == 'green' or card.card_type == current_card.card_type) and card.card_type in NUMBERS:
+                    break
+
+                if sugestao_ia == "BLU" and (card.color == 'blue' or card.card_type == current_card.card_type) and card.card_type in NUMBERS:
+                    break
+
+                if sugestao_ia == "YEL" and (card.color == 'yellow' or card.card_type == current_card.card_type) and card.card_type in NUMBERS:
+                    break
+
+                if sugestao_ia == "SKI" and card.card_type == 'skip':
+                    break
+
+                if sugestao_ia == "REV" and card.card_type == 'reverse':
+                    break
+
+                if sugestao_ia == "PL2" and card.card_type == '+2':
+                    break
+
+                if sugestao_ia == "PL4" and card.card_type == '+4':
+                    break
+
+                if sugestao_ia == "COL" and card.card_type == 'wildcard':
+                    break
+
+            if not game.current_card.playable(card):
+                for i, card in enumerate(player.hand):
+                    i = i
+                    card = card
+                    if game.current_card.playable(card):
+                        print("FALHA DA IA")
+                        break
+
+            print(state, actions)
+            print(sugestao_ia)
+            print(card)
+
+            if card.color == 'black':
+                new_color = choice(COLORS)
+            else:
+                new_color = None
+            game_data.log = "Player {} played {:full}".format(player, card)
+            game.play(player=player_id, card=i, new_color=new_color)
+            
         else:
             game_data.log = "Player {} picked up".format(player)
             game.play(player=player_id, card=None)
@@ -432,7 +616,7 @@ class AIUnoGame:
             ' '.join(str(card) for card in self.player.hand)
         ))
 
-num_players = 3
+num_players = 2
 
 game = AIUnoGame(num_players)
 
